@@ -1,0 +1,9 @@
+/* rippers-stylish-hud — light theme touch-ups for the SAH party HUD/action menu.
+   The bar colours (HP red / MP blue / IP gold) are supplied by the registered
+   default attributes; this file only nudges the blood-register accents on the
+   condition tray + submenu header. Kept intentionally small — SAH owns layout. */
+
+.stylish-action-hud .ib-conditions .ib-condition { border-radius: 3px; }
+
+/* Blood-register accent on submenu headers when our adapter is active. */
+.stylish-action-hud .ib-menu-header { letter-spacing: 0.02em; }
