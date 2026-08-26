@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 
 const {
 	fuStats, fuConditions, fuActionCategories, fuSubmenu,
-	arcanaItems, guiseItems, clotItems, classSkillItems,
+	arcanaItems, guiseItems, classSkillItems,
 	registerWithSAH, makeAdapter, DEFAULT_ATTRIBUTES, SYSTEM_ID,
 } = await import('../scripts/rippers-stylish-hud.mjs');
 
@@ -59,55 +59,61 @@ test('fuConditions maps temporaryEffects and drops icon-less ones', () => {
 });
 
 // --- detectors ----------------------------------------------------------------
-test('custom-item detectors discriminate Arcana / Guise / Clots by their real markers', () => {
-	const host = item('customWeapon', 'Aether Blade', { system: { slotted: [item('hoplosphere', 'Ember Clot')] } });
+test('custom-item detectors discriminate Arcana / Guise by their real markers', () => {
 	const a = actor({ items: [
 		feature('Agares', 'projectfu.arcanum'),
 		feature('The Wolf', 'rippers-guise.guise'),
 		feature('Bone Deep', 'some.other'),   // a plain class feature
 		item('skill', 'Rage'),
-		host,
 	] });
 	assert.deepEqual(arcanaItems(a).map((i) => i.name), ['Agares']);
 	assert.deepEqual(guiseItems(a).map((i) => i.name), ['The Wolf']);
-	assert.equal(clotItems(a).length, 1);
-	assert.equal(clotItems(a)[0].host.name, 'Aether Blade');
 	// classSkillItems includes skill + plain classFeature, but NOT arcana/guise features
 	const names = classSkillItems(a).map((i) => i.name).sort();
 	assert.deepEqual(names, ['Bone Deep', 'Rage']);
 });
 
 // --- action categories --------------------------------------------------------
-test('fuActionCategories only surfaces categories the actor has, no double-listing', () => {
+test('fuActionCategories only surfaces categories the actor has, no double-listing, no Clots', () => {
 	const empty = fuActionCategories(actor());
 	assert.deepEqual(empty, []);                       // no items -> no categories
-	const host = item('armor', 'Plated Coat', { system: { slotted: [item('hoplosphere', 'Iron Clot')] } });
 	const full = fuActionCategories(actor({ items: [
 		item('weapon', 'Sabre'), item('spell', 'Flare'), item('skill', 'Study'),
-		feature('Agares', 'projectfu.arcanum'), feature('The Wolf', 'rippers-guise.guise'), host,
+		feature('Agares', 'projectfu.arcanum'), feature('The Wolf', 'rippers-guise.guise'),
 	] }));
-	assert.deepEqual(full.map((c) => c.id), ['attacks', 'spells', 'skills', 'arcana', 'clots', 'guise']);
+	assert.deepEqual(full.map((c) => c.id), ['attacks', 'spells', 'skills', 'arcana', 'guise']);
+	assert.ok(!full.some((c) => c.id === 'clots'), 'Clots must never be a category');
 	full.forEach((c) => { assert.equal(c.type, 'submenu'); assert.equal(c.systemId, SYSTEM_ID); });
 });
 
+test('Arcana is Arcanist-gated: absent without an Arcanum item, present with one', () => {
+	// a non-Arcanist (weapon, spell, guise — but no Arcanum) never gets the Arcana category
+	const nonArcanist = fuActionCategories(actor({ items: [
+		item('weapon', 'Sabre'), item('spell', 'Flare'), feature('The Wolf', 'rippers-guise.guise'),
+	] }));
+	assert.ok(!nonArcanist.some((c) => c.id === 'arcana'), 'non-Arcanist must not see Arcana');
+	// an Arcanist (holds an Arcanum item) does
+	const arcanist = fuActionCategories(actor({ items: [feature('Agares', 'projectfu.arcanum')] }));
+	assert.ok(arcanist.some((c) => c.id === 'arcana'), 'Arcanist must see Arcana');
+});
+
 // --- submenus -----------------------------------------------------------------
-test('fuSubmenu builds items per category, Arcana gets a Pulse + Dismiss pair', () => {
-	const host = item('customWeapon', 'Aether Blade', { system: { slotted: [item('hoplosphere', 'Ember Clot')] } });
+test('fuSubmenu builds items per category, Arcana gets a Pulse + Dismiss pair, Clots gone', () => {
+	const host = item('customWeapon', 'Aether Blade');
 	const a = actor({ items: [
 		item('weapon', 'Sabre'), item('spell', 'Flare'),
 		feature('Agares', 'projectfu.arcanum'), feature('The Wolf', 'rippers-guise.guise'), host,
 	] });
-	// the customWeapon host is legitimately an attack too, alongside its Clots below
+	// the customWeapon host is legitimately an attack alongside plain weapons
 	assert.deepEqual(fuSubmenu(a, 'attacks').items.map((i) => i.name), ['Sabre', 'Aether Blade']);
 	assert.deepEqual(fuSubmenu(a, 'spells').items.map((i) => i.name), ['Flare']);
 	const arc = fuSubmenu(a, 'arcana');
 	assert.deepEqual(arc.items.map((i) => i.name), ['Agares: Pulse', 'Agares: Dismiss']);
 	assert.match(arc.items[0].id, /^arcana-pulse:/);
 	assert.match(arc.items[1].id, /^arcana-dismiss:/);
-	const clot = fuSubmenu(a, 'clots');
-	assert.equal(clot.items[0].name, 'Ember Clot — Aether Blade');
-	assert.match(clot.items[0].id, /^clot:/);
 	assert.deepEqual(fuSubmenu(a, 'guise').items.map((i) => i.name), ['The Wolf']);
+	// Clots is no longer a category — its submenu resolves to the empty default
+	assert.deepEqual(fuSubmenu(a, 'clots'), { title: '', items: [] });
 	assert.deepEqual(fuSubmenu(a, 'nope'), { title: '', items: [] });
 });
 

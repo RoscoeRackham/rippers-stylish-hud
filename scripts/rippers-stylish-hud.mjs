@@ -3,8 +3,7 @@
  * -----------------------------------------------------------------------------
  * A bridge module that registers a Fabula Ultima (projectfu) SYSTEM ADAPTER with
  * the "Stylish Action HUD" (SAH) module, so the party HUD and action menu know how
- * to read a Project FU actor — INCLUDING our custom item types (Arcana, Clots /
- * hoplosphere sockets, and Guises).
+ * to read a Project FU actor — INCLUDING our custom item types (Arcana and Guises).
  *
  * VERIFIED against the free reference integrations' real source (not guessed):
  *   - CalielBR/sf2e-stylish-action-hud-integration  (stylish-bridge-sf2e)
@@ -20,7 +19,9 @@
  *   - Party HUD tracks: HP / MP / IP bars + status-condition icons. Nothing else
  *     (NOT Fabula/Ultima points, NOT zenit).
  *   - Action menu: core FU (attacks/weapons, spells, class skills/features) PLUS
- *     Arcana (pulse/dismiss), Clots (hoplosphere on weapon/armor), Guises.
+ *     Arcana (pulse/dismiss, Arcanist-only — shown only for actors that hold an
+ *     Arcanum item) and Guises. (Clots are NOT a menu category — Austin, 2026-08-26;
+ *     their mechanical effects still ride on the host weapon/armor.)
  *
  * The mapping logic lives in PURE, exported helpers so it is unit-testable headless
  * (no SAH, no Foundry runtime needed). The adapter class + registration are thin
@@ -33,7 +34,6 @@ const SYSTEM_ID = 'projectfu';
 // Custom-item discriminators (verified against the sibling modules' source).
 const ARCANUM_FEATURE = 'projectfu.arcanum';     // rippers-arcana: classFeature system.featureType
 const GUISE_FEATURE   = 'rippers-guise.guise';   // rippers-guise: classFeature system.featureType
-const HOST_TYPES      = new Set(['customWeapon', 'armor']); // hosts that seat hoplospheres
 
 // Blood-register bar colours (register ruling): HP red, MP steel-blue, IP gold.
 const DEFAULT_ATTRIBUTES = [
@@ -47,7 +47,6 @@ const ID = {
 	item:        (id) => `item:${id}`,
 	arcanaPulse: (id) => `arcana-pulse:${id}`,
 	arcanaDismiss: (id) => `arcana-dismiss:${id}`,
-	clot:        (hostId, sphereId) => `clot:${hostId}:${sphereId}`,
 	guise:       (id) => `guise:${id}`,
 };
 
@@ -100,26 +99,11 @@ export function fuConditions(actor) {
 }
 
 // =============================================================================
-// Custom-item detectors (Arcana / Clots / Guises) — pure
+// Custom-item detectors (Arcana / Guises) — pure
 // =============================================================================
 export const arcanaItems = (actor) => itemsOf(actor).filter((i) => i?.type === 'classFeature' && i?.system?.featureType === ARCANUM_FEATURE);
 export const guiseItems  = (actor) => itemsOf(actor).filter((i) => i?.type === 'classFeature' && i?.system?.featureType === GUISE_FEATURE);
 
-/** Hoplospheres seated on a host (weapon/armor), read the same way rippers-guise does. Pure. */
-export function seatedSpheres(host) {
-	const src = host?.system?.slotted;
-	const arr = Array.isArray(src) ? src : (src ? Array.from(src) : Array.from(host?.items ?? []));
-	return arr.filter((s) => s?.type === 'hoplosphere');
-}
-/** All Clots (hoplospheres) across the actor's weapon/armor hosts, with their host. Pure. */
-export function clotItems(actor) {
-	const out = [];
-	for (const host of itemsOf(actor)) {
-		if (!HOST_TYPES.has(host?.type)) continue;
-		for (const sphere of seatedSpheres(host)) out.push({ sphere, host });
-	}
-	return out;
-}
 /** Regular class skills/features — classFeatures that are NOT our Arcana or Guise features. Pure. */
 export function classSkillItems(actor) {
 	return itemsOf(actor).filter((i) =>
@@ -138,8 +122,9 @@ export function fuActionCategories(actor) {
 	if (itemsOfType(actor, 'weapon', 'customWeapon', 'basic').length) cats.push(cat('attacks', 'Attacks', 'ra ra-crossed-swords'));
 	if (itemsOfType(actor, 'spell').length) cats.push(cat('spells', 'Spells', 'ra ra-crystal-wand'));
 	if (classSkillItems(actor).length) cats.push(cat('skills', 'Skills & Features', 'ra ra-trophy'));
+	// Arcana is Arcanist-only: it appears ONLY when the actor holds an Arcanum item
+	// (i.e. an Arcanist), and is absent for every other actor.
 	if (arcanaItems(actor).length) cats.push(cat('arcana', 'Arcana', 'fa-solid fa-hand-sparkles'));
-	if (clotItems(actor).length) cats.push(cat('clots', 'Clots', 'fa-solid fa-droplet'));
 	if (guiseItems(actor).length) cats.push(cat('guise', 'Guises', 'fa-solid fa-mask'));
 	return cats;
 }
@@ -164,13 +149,6 @@ export function fuSubmenu(actor, categoryId) {
 			}
 			return { title: 'Arcana', items };
 		}
-		case 'clots':
-			return {
-				title: 'Clots',
-				items: clotItems(actor).map(({ sphere, host }) => ({
-					id: ID.clot(host.id, sphere.id), name: `${sphere.name} — ${host.name}`, img: sphere.img,
-				})),
-			};
 		case 'guise':
 			return { title: 'Guises', items: guiseItems(actor).map((g) => ({ id: ID.guise(g.id), name: g.name, img: g.img })) };
 		default:
@@ -211,10 +189,6 @@ export async function fuExecuteAction(actor, actionId) {
 		case 'item': return activateItem(actor?.items?.get(a));
 		case 'arcana-pulse': return postArcanaText(actor, actor?.items?.get(a), 'pulse');
 		case 'arcana-dismiss': return postArcanaText(actor, actor?.items?.get(a), 'dismiss');
-		case 'clot': {
-			// A seated sphere isn't independently "used"; open its host so the player can act on it.
-			return actor?.items?.get(a)?.sheet?.render(true);
-		}
 		case 'guise': {
 			// Route to the rippers-guise API when present (bind/activate the guise), else open it.
 			const item = actor?.items?.get(a);

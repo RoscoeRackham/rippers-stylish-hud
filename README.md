@@ -17,9 +17,12 @@ Nothing else on the HUD — no Fabula/Ultima Points, no zenit.
 - **Attacks** — weapons / custom weapons / basic attacks
 - **Spells**
 - **Skills & Features** — class skills, heroic skills, ordinary class features
-- **Arcana** — each Arcanum offers *Pulse* and *Dismiss* (from `rippers-arcana`)
-- **Clots** — hoplospheres seated on weapons/armor (sockets)
+- **Arcana** — each Arcanum offers *Pulse* and *Dismiss* (from `rippers-arcana`).
+  Shown **only for Arcanists** (actors that hold an Arcanum item); hidden for everyone else.
 - **Guises** — bind/activate a guise (routes to the `rippers-guise` API)
+
+Clots (hoplosphere sockets) are intentionally **not** a menu category — their effects
+ride on the host weapon/armor.
 
 ## How it works
 

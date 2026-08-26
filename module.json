@@ -1,7 +1,7 @@
 {
 	"id": "rippers-stylish-hud",
 	"title": "Rippers Unmasked — Stylish Action HUD (Fabula Ultima bridge)",
-	"description": "Registers a Project FU (Fabula Ultima) system adapter with the Stylish Action HUD module: a party HUD tracking HP / MP / IP + condition icons, and an action menu for core FU actions (attacks, spells, class skills/features) plus this campaign's custom item types — Arcana (pulse/dismiss), Clots (hoplosphere sockets), and Guises. Uses only SAH's public adapter API (no Project FU fork; no SAH code redistributed). A personal-table module — not for redistribution.",
+	"description": "Registers a Project FU (Fabula Ultima) system adapter with the Stylish Action HUD module: a party HUD tracking HP / MP / IP + condition icons, and an action menu for core FU actions (attacks, spells, class skills/features) plus this campaign's custom item types — Arcana (pulse/dismiss, Arcanist-only) and Guises. Uses only SAH's public adapter API (no Project FU fork; no SAH code redistributed). A personal-table module — not for redistribution.",
 	"version": "0.1.0",
 	"url": "https://github.com/RoscoeRackham/rippers-stylish-hud",
 	"manifest": "https://github.com/RoscoeRackham/rippers-stylish-hud/releases/latest/download/module.json",
@@ -20,7 +20,7 @@
 	},
 	"flags": {
 		"rippers-stylish-hud": {
-			"note": "Registers a 'projectfu' system adapter on Stylish Action HUD via Hooks.once('stylish-action-hud.apiReady'). Scope: HP/MP/IP + conditions on the party HUD; core FU + Arcana/Clot/Guise on the action menu. No FU or SAH code redistributed."
+			"note": "Registers a 'projectfu' system adapter on Stylish Action HUD via Hooks.once('stylish-action-hud.apiReady'). Scope: HP/MP/IP + conditions on the party HUD; core FU + Arcana (Arcanist-only) + Guises on the action menu. No FU or SAH code redistributed."
 		}
 	}
 }
