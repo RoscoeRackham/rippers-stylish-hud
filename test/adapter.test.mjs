@@ -12,8 +12,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 const {
-	fuStats, fuConditions, fuActionCategories, fuSubmenu,
-	arcanaItems, guiseItems, classSkillItems, inventoryItems,
+	fuStats, fuConditions, fuActionCategories, fuSubmenu, fuExecuteAction,
+	arcanaItems, guiseItems, classSkillItems, inventoryItems, SYSTEM_ACTIONS,
 	registerWithSAH, makeAdapter, createProjectFUAdapter, DEFAULT_ATTRIBUTES, SYSTEM_ID,
 } = await import('../scripts/rippers-stylish-hud.mjs');
 
@@ -74,17 +74,43 @@ test('custom-item detectors discriminate Arcana / Guise by their real markers', 
 });
 
 // --- action categories --------------------------------------------------------
-test('fuActionCategories only surfaces categories the actor has, no double-listing, no Clots', () => {
-	const empty = fuActionCategories(actor());
-	assert.deepEqual(empty, []);                       // no items -> no categories
+test('fuActionCategories: item categories gated + no double-listing/Clots, then the 4 system actions', () => {
+	// an item-less actor still gets the four universal system actions
+	assert.deepEqual(fuActionCategories(actor()).map((c) => c.id),
+		['action.guard', 'action.study', 'action.hinder', 'action.objective']);
 	const full = fuActionCategories(actor({ items: [
 		item('weapon', 'Sabre'), item('spell', 'Flare'), item('skill', 'Study'),
 		item('consumable', 'Health Tonic'),
 		feature('Agares', 'projectfu.arcanum'), feature('The Wolf', 'rippers-guise.guise'),
 	] }));
-	assert.deepEqual(full.map((c) => c.id), ['attacks', 'spells', 'skills', 'inventory', 'arcana', 'guise']);
+	assert.deepEqual(full.map((c) => c.id),
+		['attacks', 'spells', 'skills', 'inventory', 'arcana', 'guise', 'action.guard', 'action.study', 'action.hinder', 'action.objective']);
 	assert.ok(!full.some((c) => c.id === 'clots'), 'Clots must never be a category');
-	full.forEach((c) => { assert.equal(c.type, 'submenu'); assert.equal(c.systemId, SYSTEM_ID); });
+	// submenu categories carry systemId; system actions are type 'system'
+	full.filter((c) => c.type === 'submenu').forEach((c) => assert.equal(c.systemId, SYSTEM_ID));
+	full.filter((c) => c.id.startsWith('action.')).forEach((c) => assert.equal(c.type, 'system'));
+});
+
+test('the four FU system actions register and fire through the Project FU handler', () => {
+	assert.deepEqual(SYSTEM_ACTIONS.map((s) => s.key), ['guard', 'study', 'hinder', 'objective']);
+	// shim the projectfu system API and confirm each action routes to the right handler
+	const calls = [];
+	globalThis.projectfu = {
+		StudyRollHandler: class { constructor(a) { this.a = a; } handleStudyRoll() { calls.push(['study-handler']); } },
+		ActionHandler: class { constructor(a) { this.a = a; } handleAction(k, b) { calls.push(['action-handler', k, b]); } },
+	};
+	const a = actor();
+	fuExecuteAction(a, 'action.study');
+	fuExecuteAction(a, 'action.guard');
+	fuExecuteAction(a, 'action.hinder');
+	fuExecuteAction(a, 'action.objective');
+	assert.deepEqual(calls, [
+		['study-handler'],
+		['action-handler', 'guard', false],
+		['action-handler', 'hinder', false],
+		['action-handler', 'objective', false],
+	]);
+	delete globalThis.projectfu;
 });
 
 test('Arcana is Arcanist-gated: absent without an Arcanum item, present with one', () => {

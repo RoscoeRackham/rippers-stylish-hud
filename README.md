@@ -22,6 +22,9 @@ Nothing else on the HUD — no Fabula/Ultima Points, no zenit.
 - **Arcana** — each Arcanum offers *Pulse* and *Dismiss* (from `rippers-arcana`).
   Shown **only for Arcanists** (actors that hold an Arcanum item); hidden for everyone else.
 - **Guises** — bind/activate a guise (routes to the `rippers-guise` API)
+- **Guard / Study / Hinder / Objective** — the four Fabula Ultima system actions, always
+  available; each fires the system's own action handler (Study via `StudyRollHandler`, the
+  rest via `ActionHandler`)
 
 Clots (hoplosphere sockets) are intentionally **not** a menu category — their effects
 ride on the host weapon/armor.

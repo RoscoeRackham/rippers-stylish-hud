@@ -26,7 +26,8 @@
  * SCOPE (Austin, LOCKED — 2026-08-25/26):
  *   - Party HUD tracks: HP / MP / IP bars + status-condition icons. Nothing else.
  *   - Action menu: Attacks, Spells, Skills & Features, Inventory, Arcana (Arcanist-
- *     only — shown only for actors that hold an Arcanum item), Guises. NO Clots
+ *     only — shown only for actors that hold an Arcanum item), Guises, then the four
+ *     universal FU system actions (Guard / Study / Hinder / Objective). NO Clots
  *     (their effects ride on the host weapon/armor).
  *
  * The mapping logic lives in PURE, exported helpers so it is unit-testable headless
@@ -126,7 +127,18 @@ export function classSkillItems(actor) {
 // Action menu — categories + submenu data
 // =============================================================================
 
-/** getActionCategories: only surface a category when the actor actually has items for it. Pure. */
+// The four Fabula Ultima system actions (community-assets convention): rendered as
+// `type: 'system'` buttons (no submenu), fired through the system's own handler.
+// Universal — shown for every actor, not has-items gated.
+export const SYSTEM_ACTIONS = [
+	{ id: 'action.guard',     key: 'guard',     label: 'FU.Guard',     fallback: 'Guard',     icon: 'ra ra-shield' },
+	{ id: 'action.study',     key: 'study',     label: 'FU.Study',     fallback: 'Study',     icon: 'ra ra-book' },
+	{ id: 'action.hinder',    key: 'hinder',    label: 'FU.Hinder',    fallback: 'Hinder',    icon: 'ra ra-interdiction' },
+	{ id: 'action.objective', key: 'objective', label: 'FU.Objective', fallback: 'Objective', icon: 'ra ra-targeted' },
+];
+
+/** getActionCategories: submenu categories only when the actor has items for them,
+ *  then the four universal FU system actions. Pure. */
 export function fuActionCategories(actor) {
 	const cats = [];
 	const cat = (id, label, icon) => ({ id, label, icon, type: 'submenu', systemId: SYSTEM_ID });
@@ -138,6 +150,8 @@ export function fuActionCategories(actor) {
 	// (i.e. an Arcanist), and is absent for every other actor.
 	if (arcanaItems(actor).length) cats.push(cat('arcana', L('RIPPERS.SAH.Arcana', 'Arcana'), 'fa-solid fa-hand-sparkles'));
 	if (guiseItems(actor).length) cats.push(cat('guise', L('RIPPERS.SAH.Guises', 'Guises'), 'fa-solid fa-mask'));
+	// The four FU system actions, always available (community-assets layout).
+	for (const s of SYSTEM_ACTIONS) cats.push({ id: s.id, label: L(s.label, s.fallback), icon: s.icon, type: 'system' });
 	return cats;
 }
 
@@ -203,9 +217,23 @@ async function postArcanaText(actor, item, which) {
 	} catch (err) { console.error(`[${MODULE_ID}] postArcanaText failed`, err); }
 }
 
+/** Run a Fabula Ultima system action through the system's own handler (community pattern):
+ *  Study via projectfu.StudyRollHandler, the rest via projectfu.ActionHandler. Runtime. */
+async function runSystemAction(actor, key) {
+	const pfu = globalThis.projectfu;
+	try {
+		if (key === 'study' && pfu?.StudyRollHandler) return await new pfu.StudyRollHandler(actor).handleStudyRoll();
+		if (pfu?.ActionHandler) return await new pfu.ActionHandler(actor).handleAction(key, false);
+		console.warn(`[${MODULE_ID}] no Project FU handler available for system action "${key}".`);
+	} catch (err) { console.error(`[${MODULE_ID}] system action "${key}" failed`, err); }
+}
+
 /** executeAction: route a namespaced action id to the right behaviour. Runtime. */
 export async function fuExecuteAction(actor, actionId) {
-	const [kind, a] = String(actionId ?? '').split(':');
+	const raw = String(actionId ?? '');
+	// FU system actions use the community "action.<name>" id (dot); route them first.
+	if (raw.startsWith('action.')) return runSystemAction(actor, raw.slice('action.'.length));
+	const [kind, a] = raw.split(':');
 	switch (kind) {
 		case 'item': return activateItem(actor?.items?.get(a));
 		case 'arcana-pulse': return postArcanaText(actor, actor?.items?.get(a), 'pulse');
