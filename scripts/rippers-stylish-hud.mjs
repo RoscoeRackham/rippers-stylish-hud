@@ -5,27 +5,32 @@
  * the "Stylish Action HUD" (SAH) module, so the party HUD and action menu know how
  * to read a Project FU actor — INCLUDING our custom item types (Arcana and Guises).
  *
- * VERIFIED against the free reference integrations' real source (not guessed):
- *   - CalielBR/sf2e-stylish-action-hud-integration  (stylish-bridge-sf2e)
- *   - swade-StylishActionHud-integration
- * The registration hook + adapter interface both come from those working modules:
- *   Hooks.once("stylish-action-hud.apiReady", api => api.registerSystemAdapter(id, Class))
- *   adapter methods: getStats / getConditions / getActionCategories / getSubMenuData
- *                    (+ executeAction / useItem, optional getDefaultAttributes)
- * SAH itself is a Patreon module; this bridge only needs its public adapter API and
- * loads harmlessly (no-ops) if SAH is absent. NO Project FU fork.
+ * CONVENTIONS — aligned to the SAH community-assets hub's ProjectFU adapter
+ * (wyrmisis/stylish-action-hud-community-assets, src/projectfu):
+ *   - register on `Hooks.once("stylish-action-hud.apiReady", api => …)` via a
+ *     `createProjectFUAdapter(BaseSystemAdapter)` factory that EXTENDS SAH's
+ *     `api.BaseSystemAdapter` (so super.* fallbacks work), then
+ *     `api.registerSystemAdapter("projectfu", Adapter, {priority, source, isCompatible})`
+ *     + `api.registerDefaultAttributes` + `api.registerTheme`.
+ *   - reuse the Project FU system's own i18n keys (FU.Attack / FU.Spell / FU.Skill /
+ *     FU.Inventory) for the core categories; RIPPERS.SAH.* for our own.
+ *   - Inventory = `consumable` items; IP cost read from `system.ipCost.value`; fired
+ *     with the item's `.roll()`, the same path the community adapter uses.
+ * The registration HOOK + adapter method surface were first verified against the
+ * FUNCTIONING free integrations (CalielBR/sf2e-stylish-action-hud-integration,
+ * swade-StylishActionHud-integration) — both call the same apiReady/registerSystemAdapter.
+ * If SAH does not expose `api.BaseSystemAdapter` (older builds), we fall back to a
+ * STANDALONE adapter (extends Object) so registration still works. NO Project FU fork,
+ * no SAH code redistributed; loads harmlessly if SAH is absent.
  *
- * SCOPE (Austin, LOCKED 2026-08-25):
- *   - Party HUD tracks: HP / MP / IP bars + status-condition icons. Nothing else
- *     (NOT Fabula/Ultima points, NOT zenit).
- *   - Action menu: core FU (attacks/weapons, spells, class skills/features) PLUS
- *     Arcana (pulse/dismiss, Arcanist-only — shown only for actors that hold an
- *     Arcanum item) and Guises. (Clots are NOT a menu category — Austin, 2026-08-26;
- *     their mechanical effects still ride on the host weapon/armor.)
+ * SCOPE (Austin, LOCKED — 2026-08-25/26):
+ *   - Party HUD tracks: HP / MP / IP bars + status-condition icons. Nothing else.
+ *   - Action menu: Attacks, Spells, Skills & Features, Inventory, Arcana (Arcanist-
+ *     only — shown only for actors that hold an Arcanum item), Guises. NO Clots
+ *     (their effects ride on the host weapon/armor).
  *
  * The mapping logic lives in PURE, exported helpers so it is unit-testable headless
- * (no SAH, no Foundry runtime needed). The adapter class + registration are thin
- * wrappers the live game calls.
+ * (no SAH, no Foundry runtime). The adapter class + registration are thin wrappers.
  * =============================================================================*/
 
 const MODULE_ID = 'rippers-stylish-hud';
@@ -44,13 +49,13 @@ const DEFAULT_ATTRIBUTES = [
 
 // Action id namespacing (executeAction / useItem parse these back).
 const ID = {
-	item:        (id) => `item:${id}`,
-	arcanaPulse: (id) => `arcana-pulse:${id}`,
+	item:          (id) => `item:${id}`,
+	arcanaPulse:   (id) => `arcana-pulse:${id}`,
 	arcanaDismiss: (id) => `arcana-dismiss:${id}`,
-	guise:       (id) => `guise:${id}`,
+	guise:         (id) => `guise:${id}`,
 };
 
-// --- tiny pure path getter (no foundry.utils dependency -> unit-testable) -----
+// --- tiny helpers (no foundry.utils / game dependency -> unit-testable) --------
 function getProp(obj, path) {
 	if (obj == null || !path) return undefined;
 	return String(path).split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
@@ -58,6 +63,11 @@ function getProp(obj, path) {
 const clampPercent = (n) => Math.max(0, Math.min(100, Number.isFinite(n) ? n : 0));
 const itemsOf = (actor) => Array.from(actor?.items ?? []);
 const itemsOfType = (actor, ...types) => itemsOf(actor).filter((i) => types.includes(i?.type));
+/** Localize with an English fallback so headless code/tests never render a bare key. */
+const L = (key, fallback) => {
+	const s = globalThis.game?.i18n?.localize?.(key);
+	return (s && s !== key) ? s : fallback;
+};
 
 // =============================================================================
 // Party HUD — stats (HP/MP/IP) + conditions
@@ -103,7 +113,8 @@ export function fuConditions(actor) {
 // =============================================================================
 export const arcanaItems = (actor) => itemsOf(actor).filter((i) => i?.type === 'classFeature' && i?.system?.featureType === ARCANUM_FEATURE);
 export const guiseItems  = (actor) => itemsOf(actor).filter((i) => i?.type === 'classFeature' && i?.system?.featureType === GUISE_FEATURE);
-
+/** Inventory = carried usable gear: Project FU `consumable` items (potions/tonics/etc.). Pure. */
+export const inventoryItems = (actor) => itemsOfType(actor, 'consumable');
 /** Regular class skills/features — classFeatures that are NOT our Arcana or Guise features. Pure. */
 export function classSkillItems(actor) {
 	return itemsOf(actor).filter((i) =>
@@ -119,27 +130,35 @@ export function classSkillItems(actor) {
 export function fuActionCategories(actor) {
 	const cats = [];
 	const cat = (id, label, icon) => ({ id, label, icon, type: 'submenu', systemId: SYSTEM_ID });
-	if (itemsOfType(actor, 'weapon', 'customWeapon', 'basic').length) cats.push(cat('attacks', 'Attacks', 'ra ra-crossed-swords'));
-	if (itemsOfType(actor, 'spell').length) cats.push(cat('spells', 'Spells', 'ra ra-crystal-wand'));
-	if (classSkillItems(actor).length) cats.push(cat('skills', 'Skills & Features', 'ra ra-trophy'));
+	if (itemsOfType(actor, 'weapon', 'customWeapon', 'basic').length) cats.push(cat('attacks', L('FU.Attack', 'Attacks'), 'ra ra-crossed-swords'));
+	if (itemsOfType(actor, 'spell').length) cats.push(cat('spells', L('FU.Spell', 'Spells'), 'ra ra-crystal-wand'));
+	if (classSkillItems(actor).length) cats.push(cat('skills', L('RIPPERS.SAH.Skills', 'Skills & Features'), 'ra ra-trophy'));
+	if (inventoryItems(actor).length) cats.push(cat('inventory', L('FU.Inventory', 'Inventory'), 'ra ra-ammo-bag'));
 	// Arcana is Arcanist-only: it appears ONLY when the actor holds an Arcanum item
 	// (i.e. an Arcanist), and is absent for every other actor.
-	if (arcanaItems(actor).length) cats.push(cat('arcana', 'Arcana', 'fa-solid fa-hand-sparkles'));
-	if (guiseItems(actor).length) cats.push(cat('guise', 'Guises', 'fa-solid fa-mask'));
+	if (arcanaItems(actor).length) cats.push(cat('arcana', L('RIPPERS.SAH.Arcana', 'Arcana'), 'fa-solid fa-hand-sparkles'));
+	if (guiseItems(actor).length) cats.push(cat('guise', L('RIPPERS.SAH.Guises', 'Guises'), 'fa-solid fa-mask'));
 	return cats;
 }
 
 const asItem = (i) => ({ id: ID.item(i.id), name: i.name, img: i.img });
+/** An inventory entry, with an IP cost string when the consumable carries one. */
+function asInventoryItem(i) {
+	const ip = Number(getProp(i, 'system.ipCost.value') ?? 0) || 0;
+	return { id: ID.item(i.id), name: i.name, img: i.img, description: getProp(i, 'system.description') || '', cost: ip ? `${ip} IP` : null };
+}
 
 /** getSubMenuData: build the item list for one category. Pure. */
 export function fuSubmenu(actor, categoryId) {
 	switch (categoryId) {
 		case 'attacks':
-			return { title: 'Attacks', items: itemsOfType(actor, 'weapon', 'customWeapon', 'basic').map(asItem) };
+			return { title: L('FU.Attack', 'Attacks'), items: itemsOfType(actor, 'weapon', 'customWeapon', 'basic').map(asItem) };
 		case 'spells':
-			return { title: 'Spells', items: itemsOfType(actor, 'spell').map(asItem) };
+			return { title: L('FU.Spell', 'Spells'), items: itemsOfType(actor, 'spell').map(asItem) };
 		case 'skills':
-			return { title: 'Skills & Features', items: classSkillItems(actor).map(asItem) };
+			return { title: L('RIPPERS.SAH.Skills', 'Skills & Features'), items: classSkillItems(actor).map(asItem) };
+		case 'inventory':
+			return { title: L('FU.Inventory', 'Inventory'), items: inventoryItems(actor).map(asInventoryItem) };
 		case 'arcana': {
 			// Each Arcanum offers two actions: Pulse and Dismiss.
 			const items = [];
@@ -147,25 +166,27 @@ export function fuSubmenu(actor, categoryId) {
 				items.push({ id: ID.arcanaPulse(a.id), name: `${a.name}: Pulse`, img: a.img });
 				items.push({ id: ID.arcanaDismiss(a.id), name: `${a.name}: Dismiss`, img: a.img });
 			}
-			return { title: 'Arcana', items };
+			return { title: L('RIPPERS.SAH.Arcana', 'Arcana'), items };
 		}
 		case 'guise':
-			return { title: 'Guises', items: guiseItems(actor).map((g) => ({ id: ID.guise(g.id), name: g.name, img: g.img })) };
+			return { title: L('RIPPERS.SAH.Guises', 'Guises'), items: guiseItems(actor).map((g) => ({ id: ID.guise(g.id), name: g.name, img: g.img })) };
 		default:
 			return { title: '', items: [] };
 	}
 }
+/** The category ids this adapter handles itself (others fall through to super). */
+export const HANDLED_CATEGORIES = new Set(['attacks', 'spells', 'skills', 'inventory', 'arcana', 'guise']);
 
 // =============================================================================
 // Action execution (runtime — routes to the FU roll / our module APIs)
 // =============================================================================
 
-/** Best-effort activation of a Foundry Item across FU versions: use() -> roll() -> open sheet. */
+/** Best-effort activation of a Foundry Item across FU versions: roll() -> use() -> open sheet. */
 async function activateItem(item) {
 	if (!item) return;
 	try {
+		if (typeof item.roll === 'function') return await item.roll();   // FU's item roll/use path
 		if (typeof item.use === 'function') return await item.use();
-		if (typeof item.roll === 'function') return await item.roll();
 		return item.sheet?.render(true);
 	} catch (err) { console.error(`[${MODULE_ID}] activateItem failed`, err); }
 }
@@ -184,7 +205,7 @@ async function postArcanaText(actor, item, which) {
 
 /** executeAction: route a namespaced action id to the right behaviour. Runtime. */
 export async function fuExecuteAction(actor, actionId) {
-	const [kind, a, b] = String(actionId ?? '').split(':');
+	const [kind, a] = String(actionId ?? '').split(':');
 	switch (kind) {
 		case 'item': return activateItem(actor?.items?.get(a));
 		case 'arcana-pulse': return postArcanaText(actor, actor?.items?.get(a), 'pulse');
@@ -210,31 +231,50 @@ export async function fuUseItem(actor, itemId) {
 }
 
 // =============================================================================
-// The adapter + registration
+// The adapter factory + registration (community convention)
 // =============================================================================
-export function makeAdapter() {
-	return class RippersFuAdapter {
-		constructor() { this.systemId = SYSTEM_ID; }
+
+/** Build the adapter class on top of SAH's BaseSystemAdapter (or Object as a fallback). */
+export function createProjectFUAdapter(Base = Object) {
+	return class RippersFuAdapter extends Base {
+		constructor() { super(); this.systemId = SYSTEM_ID; }
 		getStats(actor, configAttributes) { return fuStats(actor, configAttributes); }
 		getConditions(actor) { return fuConditions(actor); }
 		getActionCategories(actor) { return fuActionCategories(actor); }
-		async getSubMenuData(actor, categoryId) { return fuSubmenu(actor, categoryId); }
+		async getSubMenuData(actor, categoryId) {
+			if (!HANDLED_CATEGORIES.has(categoryId) && typeof super.getSubMenuData === 'function') {
+				return super.getSubMenuData(actor, categoryId);
+			}
+			return fuSubmenu(actor, categoryId);
+		}
 		async executeAction(actor, actionId) { return fuExecuteAction(actor, actionId); }
-		async useItem(actor, itemId) { return fuUseItem(actor, itemId); }
+		async useItem(actor, itemId) {
+			if (String(itemId).startsWith('macro-') && typeof super.useItem === 'function') return super.useItem(actor, itemId);
+			return fuUseItem(actor, itemId);
+		}
 		getDefaultAttributes() { return DEFAULT_ATTRIBUTES; }
 	};
 }
+// Test/back-compat alias.
+export const makeAdapter = () => createProjectFUAdapter(Object);
 
 /** Register with SAH once its API is ready. Guarded so an absent/old SAH never throws. */
 export function registerWithSAH(api) {
-	if (!api) return false;
-	const Adapter = makeAdapter();
+	if (!api?.registerSystemAdapter) return false;
+	// Community convention: extend api.BaseSystemAdapter when present (gives super.*
+	// fallbacks); otherwise fall back to a standalone class so registration still works.
+	const Base = api.BaseSystemAdapter ?? Object;
+	const Adapter = createProjectFUAdapter(Base);
 	try {
-		api.registerSystemAdapter?.(SYSTEM_ID, Adapter, {
+		api.registerSystemAdapter(SYSTEM_ID, Adapter, {
 			priority: 100, source: MODULE_ID,
 			isCompatible: (ctx) => (ctx?.system?.id ?? globalThis.game?.system?.id) === SYSTEM_ID,
 		});
 		api.registerDefaultAttributes?.(SYSTEM_ID, DEFAULT_ATTRIBUTES, { source: MODULE_ID });
+		api.registerTheme?.('rippers-blood', {
+			label: 'Rippers (Blood)',
+			defaults: { scale: 1, format: 'box', nameZ: 5, barsZ: 5, dotsZ: 5, numbersZ: 5, badgesZ: 150 },
+		});
 		console.log(`[${MODULE_ID}] registered projectfu adapter with Stylish Action HUD.`);
 		return true;
 	} catch (err) {

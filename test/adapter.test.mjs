@@ -13,8 +13,8 @@ import assert from 'node:assert/strict';
 
 const {
 	fuStats, fuConditions, fuActionCategories, fuSubmenu,
-	arcanaItems, guiseItems, classSkillItems,
-	registerWithSAH, makeAdapter, DEFAULT_ATTRIBUTES, SYSTEM_ID,
+	arcanaItems, guiseItems, classSkillItems, inventoryItems,
+	registerWithSAH, makeAdapter, createProjectFUAdapter, DEFAULT_ATTRIBUTES, SYSTEM_ID,
 } = await import('../scripts/rippers-stylish-hud.mjs');
 
 // --- fake actor builder -------------------------------------------------------
@@ -79,9 +79,10 @@ test('fuActionCategories only surfaces categories the actor has, no double-listi
 	assert.deepEqual(empty, []);                       // no items -> no categories
 	const full = fuActionCategories(actor({ items: [
 		item('weapon', 'Sabre'), item('spell', 'Flare'), item('skill', 'Study'),
+		item('consumable', 'Health Tonic'),
 		feature('Agares', 'projectfu.arcanum'), feature('The Wolf', 'rippers-guise.guise'),
 	] }));
-	assert.deepEqual(full.map((c) => c.id), ['attacks', 'spells', 'skills', 'arcana', 'guise']);
+	assert.deepEqual(full.map((c) => c.id), ['attacks', 'spells', 'skills', 'inventory', 'arcana', 'guise']);
 	assert.ok(!full.some((c) => c.id === 'clots'), 'Clots must never be a category');
 	full.forEach((c) => { assert.equal(c.type, 'submenu'); assert.equal(c.systemId, SYSTEM_ID); });
 });
@@ -117,22 +118,52 @@ test('fuSubmenu builds items per category, Arcana gets a Pulse + Dismiss pair, C
 	assert.deepEqual(fuSubmenu(a, 'nope'), { title: '', items: [] });
 });
 
+// --- inventory (v0.1.1) -------------------------------------------------------
+test('Inventory = consumables; category gated, submenu carries IP cost, fires by item id', () => {
+	const bare = actor({ items: [item('weapon', 'Sabre')] });
+	assert.ok(!fuActionCategories(bare).some((c) => c.id === 'inventory'), 'no consumables -> no Inventory category');
+	const a = actor({ items: [
+		item('consumable', 'Health Tonic', { system: { ipCost: { value: 3 }, description: 'Restores HP.' } }),
+		item('consumable', 'Free Ration', { system: {} }),      // no IP cost
+	] });
+	assert.deepEqual(inventoryItems(a).map((i) => i.name), ['Health Tonic', 'Free Ration']);
+	const sub = fuSubmenu(a, 'inventory');
+	assert.equal(sub.items[0].name, 'Health Tonic');
+	assert.equal(sub.items[0].cost, '3 IP');
+	assert.equal(sub.items[1].cost, null);                    // no cost -> null, not "0 IP"
+	assert.match(sub.items[0].id, /^item:/);                  // fires via the generic item path
+});
+
 // --- registration -------------------------------------------------------------
-test('registerWithSAH registers the adapter + defaults, and no-ops on a missing api', () => {
-	const calls = { adapter: null, attrs: null };
+test('registerWithSAH registers the adapter + defaults + theme, and no-ops on a missing api', () => {
+	const calls = { adapter: null, attrs: null, theme: null };
+	class FakeBase { constructor() { this.base = true; } getSubMenuData() { return { title: 'super', items: [] }; } }
 	const fakeApi = {
-		registerSystemAdapter: (id, Cls) => { calls.adapter = { id, Cls }; },
+		BaseSystemAdapter: FakeBase,
+		registerSystemAdapter: (id, Cls, opts) => { calls.adapter = { id, Cls, opts }; },
 		registerDefaultAttributes: (id, data) => { calls.attrs = { id, data }; },
+		registerTheme: (id, cfg) => { calls.theme = { id, cfg }; },
 	};
 	assert.equal(registerWithSAH(fakeApi), true);
 	assert.equal(calls.adapter.id, SYSTEM_ID);
 	assert.equal(calls.attrs.id, SYSTEM_ID);
 	assert.equal(calls.attrs.data, DEFAULT_ATTRIBUTES);
-	// the registered class implements the SAH adapter interface
+	assert.equal(calls.theme.id, 'rippers-blood');
+	// community convention: the adapter EXTENDS SAH's BaseSystemAdapter
 	const inst = new calls.adapter.Cls();
+	assert.ok(inst instanceof FakeBase, 'adapter should extend api.BaseSystemAdapter');
+	assert.equal(inst.systemId, SYSTEM_ID);
 	for (const m of ['getStats', 'getConditions', 'getActionCategories', 'getSubMenuData', 'executeAction', 'useItem']) {
 		assert.equal(typeof inst[m], 'function', `adapter missing ${m}`);
 	}
-	assert.equal(inst.systemId, SYSTEM_ID);
 	assert.equal(registerWithSAH(null), false);         // missing api -> safe no-op
+	assert.equal(registerWithSAH({}), false);           // api without registerSystemAdapter -> no-op
+});
+
+test('makeAdapter() is a standalone adapter (no SAH base needed) implementing the interface', () => {
+	const inst = new (makeAdapter())();
+	assert.equal(inst.systemId, SYSTEM_ID);
+	for (const m of ['getStats', 'getConditions', 'getActionCategories', 'getSubMenuData', 'executeAction', 'useItem']) {
+		assert.equal(typeof inst[m], 'function');
+	}
 });
