@@ -1,9 +1,234 @@
-/* rippers-stylish-hud — light theme touch-ups for the SAH party HUD/action menu.
-   The bar colours (HP red / MP blue / IP gold) are supplied by the registered
-   default attributes; this file only nudges the blood-register accents on the
-   condition tray + submenu header. Kept intentionally small — SAH owns layout. */
+/* Interim web-font load: the four 2a "Slash" faces from Google Fonts, matching the
+   Artificer sheet (rippers-guise/styles/rippers-sheet.css) so the HUD + sheet read as
+   one design. @import must lead the file. Bundling local files is a deferred asset pass. */
+@import url('https://fonts.googleapis.com/css2?family=Grenze+Gotisch:wght@700;800;900&family=IBM+Plex+Mono:wght@400;600&family=Pirata+One&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap');
 
-.stylish-action-hud .ib-conditions .ib-condition { border-radius: 3px; }
+/* =============================================================================
+ * rippers-stylish-hud — the "Rippers Unmasked" theme for Stylish Action HUD (SAH).
+ * -----------------------------------------------------------------------------
+ * Registered in scripts/rippers-stylish-hud.mjs as theme key 'rippers' → SAH puts
+ * the class .theme-rippers on the HUD roots (SPEC-stylish-hud-theme-api.md, and the
+ * SAH "Theme API" doc: "The key becomes the theme class name … write CSS against
+ * .theme-rippers for the Party HUD, Action Menu, context menu …").
+ *
+ * VISUAL SOURCE OF TRUTH: the 2a "The Slash" identity as transcribed in the Artificer
+ * sheet CSS (rippers-guise/styles/rippers-sheet.css) — palette #070405 near-black /
+ * #c8102a blood red / #e8dccb bone; faces Grenze Gotisch (names) + Pirata One (chrome
+ * verbs) + IBM Plex Mono (controls/numbers/labels) + Spectral (body); notch-clipped
+ * cards, skew accents, a red-topped floor, offset-red slash shadows. The SAME tokens
+ * are re-declared here (scoped to .theme-rippers) so nothing leaks into other Foundry
+ * apps and the two surfaces stay in lockstep.
+ *
+ * SELECTOR PROVENANCE (this session):
+ *   CONFIRMED against the SAH "Themes & Layout" doc (theglitchsmith.com), styled below
+ *   in full — Action Menu surfaces: #ib-action-menu, #ib-sub-menu-container,
+ *   .ib-main-panel, .ib-sidebar-panel, .ib-action-btn, .ib-menu-header, .ib-magic-tabs,
+ *   .ib-quick-slot-container, .ib-identity-header, .ib-side-tab, .ib-list-item.
+ *   NOT PUBLISHED anywhere reachable this session (SAH is not installed on disk; the
+ *   docs name the layers only as z-index config keys) — the Party HUD actor CARD,
+ *   PORTRAIT, NAME layer, the bars/dots/numbers/badges layers, and the CONTEXT MENU.
+ *   Those are handled in the clearly-marked ⚠ UNVERIFIED block at the foot of this file:
+ *   the selectors there are CANDIDATES (from lodge-docs/RESEARCH-stylish-action-hud.md,
+ *   itself paraphrased) and must be confirmed by inspecting the running HUD's DOM before
+ *   being trusted. CSS against a wrong selector is inert, so the block is harmless.
+ *
+ * The theme class may land on the HUD root OR on each panel, so confirmed surfaces are
+ * matched both as a descendant of .theme-rippers AND as .theme-rippers itself.
+ * ============================================================================= */
 
-/* Blood-register accent on submenu headers when our adapter is active. */
-.stylish-action-hud .ib-menu-header { letter-spacing: 0.02em; }
+.theme-rippers,
+#ib-action-menu.theme-rippers,
+#ib-sub-menu-container.theme-rippers {
+	--rt-bg: #070405;
+	--rt-panel: #0a0507;
+	--rt-card: #120a0c;
+	--rt-card2: #1a0e12;
+	--rt-border: #2b1d16;
+	--rt-border-red: #4a1a22;
+	--rt-red: #c8102a;
+	--rt-bone: #e8dccb;
+	--rt-bone-dim: #c9b8a8;
+	--rt-muted: #8a7568;
+	--rt-gold: #c9a227;   /* IP resource colour (from the adapter's DEFAULT_ATTRIBUTES) */
+	--rt-violet: #7b4bd8; /* register: violet = Miasma / the supernatural — Guise accent.
+	                         Not tokenised in the sheet; retune to Austin's canvas violet. */
+	--rt-disp: 'Grenze Gotisch','Cinzel',Georgia,serif;
+	--rt-verb: 'Pirata One','Grenze Gotisch',fantasy,serif;
+	--rt-mono: 'IBM Plex Mono',ui-monospace,monospace;
+	--rt-body: 'Spectral',Georgia,serif;
+	--rt-notch: polygon(0 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%);
+	color: var(--rt-bone);
+	font-family: var(--rt-body);
+}
+
+/* ── Action Menu — the main right-side button column (#ib-action-menu, 240px) ───── */
+.theme-rippers #ib-action-menu,
+#ib-action-menu.theme-rippers {
+	position: relative;
+	background: var(--rt-bg);
+	border: 1px solid var(--rt-border);
+	border-top: 2px solid var(--rt-red);            /* red-topped floor motif */
+	clip-path: var(--rt-notch);
+	box-shadow: 6px 6px 0 rgba(200,16,42,.22), 0 20px 50px rgba(0,0,0,.6);
+	color: var(--rt-bone);
+}
+/* faint bone grain over the near-black ground (the sheet's rs-grain) */
+.theme-rippers #ib-action-menu::before,
+#ib-action-menu.theme-rippers::before {
+	content: ''; position: absolute; inset: 0; pointer-events: none;
+	background-image: radial-gradient(circle, rgba(232,220,203,.05) 1px, transparent 1px);
+	background-size: 9px 9px;
+}
+
+/* ── Identity header — the floating actor-name header above the menu ───────────── */
+.theme-rippers .ib-identity-header,
+.ib-identity-header.theme-rippers {
+	background: rgba(7,4,5,.9);
+	border: 1px solid var(--rt-border);
+	border-left: 3px solid var(--rt-red);
+	color: #fff;
+	font-family: var(--rt-disp);                    /* a name → Grenze */
+	font-weight: 800;
+	line-height: 1.3;
+	letter-spacing: .01em;
+	text-shadow: 2px 2px 0 rgba(7,4,5,.9);
+	padding: 6px 12px;
+}
+
+/* ── Submenu / flyout (#ib-sub-menu-container, .ib-main-panel, .ib-sidebar-panel) ─ */
+.theme-rippers #ib-sub-menu-container,
+#ib-sub-menu-container.theme-rippers {
+	background: var(--rt-bg);
+	border: 1px solid var(--rt-border);
+	clip-path: var(--rt-notch);
+	box-shadow: 0 20px 50px rgba(0,0,0,.6);
+}
+.theme-rippers .ib-main-panel { background: var(--rt-panel); }
+.theme-rippers .ib-sidebar-panel {
+	background: var(--rt-card);
+	border-right: 1px solid var(--rt-border);
+}
+
+/* ── Submenu header (.ib-menu-header) — a title → Grenze with a blood underline ──── */
+.theme-rippers .ib-menu-header {
+	font-family: var(--rt-disp);
+	font-weight: 800;
+	font-size: 18px;
+	line-height: 1.3;
+	letter-spacing: .02em;
+	color: var(--rt-bone);
+	background: rgba(7,4,5,.85);
+	border-bottom: 2px solid var(--rt-red);
+	padding: 8px 14px;
+}
+
+/* ── Category side-tabs (.ib-side-tab) — chrome verbs, Plex Mono caps, red-active ── */
+.theme-rippers .ib-side-tab {
+	font-family: var(--rt-mono);
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: .12em;
+	text-transform: uppercase;
+	color: var(--rt-bone-dim);
+	background: var(--rt-panel);
+	border: 1px solid var(--rt-border);
+	transition: color .12s, border-color .12s, background .12s;
+}
+.theme-rippers .ib-side-tab:hover { color: var(--rt-bone); border-color: var(--rt-red); }
+.theme-rippers .ib-side-tab.active,
+.theme-rippers .ib-side-tab[aria-selected="true"],
+.theme-rippers .ib-side-tab.selected {
+	color: #fff; background: var(--rt-red); border-color: var(--rt-red);
+}
+
+/* ── Tab row (.ib-magic-tabs) ─────────────────────────────────────────────────── */
+.theme-rippers .ib-magic-tabs {
+	background: var(--rt-panel);
+	border-bottom: 1px solid var(--rt-border);
+	gap: 6px;
+}
+
+/* ── Action buttons (.ib-action-btn, 240×40 button frame) — the marquee element ─── */
+.theme-rippers .ib-action-btn {
+	font-family: var(--rt-mono);
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: .06em;
+	color: var(--rt-bone);
+	background: var(--rt-card);
+	border: 1px solid var(--rt-border);
+	border-left: 3px solid var(--rt-red);           /* blood spine */
+	transition: background .12s, color .12s, border-color .12s, box-shadow .12s;
+}
+.theme-rippers .ib-action-btn:hover {
+	color: #fff;
+	background: #12080a;
+	border-color: var(--rt-red);
+	box-shadow: 4px 4px 0 rgba(200,16,42,.28);
+}
+.theme-rippers .ib-action-btn:active { box-shadow: 1px 1px 0 rgba(200,16,42,.32); }
+.theme-rippers .ib-action-btn i,
+.theme-rippers .ib-action-btn .fa,
+.theme-rippers .ib-action-btn .ra { color: var(--rt-red); }
+.theme-rippers .ib-action-btn:hover i,
+.theme-rippers .ib-action-btn:hover .fa,
+.theme-rippers .ib-action-btn:hover .ra { color: #fff; }
+
+/* ── Submenu item rows (.ib-list-item) — Plex Mono rows, red-border hover ────────── */
+.theme-rippers .ib-list-item {
+	font-family: var(--rt-mono);
+	font-size: 12px;
+	color: var(--rt-bone-dim);
+	background: var(--rt-panel);
+	border: 1px solid var(--rt-border);
+	transition: color .12s, border-color .12s;
+}
+.theme-rippers .ib-list-item:hover { color: var(--rt-bone); border-color: var(--rt-red); }
+
+/* ── Quick-slot cells (.ib-quick-slot-container, 38×38 slots) ─────────────────────── */
+.theme-rippers .ib-quick-slot-container {
+	background: var(--rt-card);
+	border: 1px solid var(--rt-border);
+}
+.theme-rippers .ib-quick-slot-container > * {
+	border: 1px solid var(--rt-border);
+	background: var(--rt-panel);
+}
+.theme-rippers .ib-quick-slot-container > *:hover { border-color: var(--rt-red); }
+
+/* =============================================================================
+ * ⚠ UNVERIFIED — Party HUD actor card / name / resource layers + context menu.
+ * SAH does not publish these DOM class names and it is not installed on disk, so
+ * the selectors below are CANDIDATES only (lodge-docs/RESEARCH-stylish-action-hud.md,
+ * itself paraphrased). They MUST be confirmed by inspecting the running HUD before
+ * being trusted. CSS against a wrong selector is inert — this block is harmless if
+ * the names are off, and is written so a correct name lands the blood register.
+ * The resource-bar COLOURS are already supplied by the adapter's DEFAULT_ATTRIBUTES
+ * (HP #c8102a / MP #2f6fb0 / IP #c9a227); this block only dresses the card chrome.
+ * ============================================================================= */
+.theme-rippers .ib-card {
+	background: var(--rt-card);
+	border: 1px solid var(--rt-border);
+	border-top: 2px solid var(--rt-red);
+	clip-path: var(--rt-notch);
+}
+.theme-rippers .ib-name {
+	font-family: var(--rt-disp);
+	font-weight: 800;
+	line-height: 1.3;
+	color: var(--rt-bone);
+	text-shadow: 1px 1px 0 rgba(7,4,5,.9);
+}
+.theme-rippers .ib-bar-fill { border-radius: 0; }
+.theme-rippers .ib-conditions .ib-condition,
+.theme-rippers .ib-conditions { gap: 5px; }
+.theme-rippers .ib-conditions .ib-condition {
+	border: 1px solid var(--rt-border);
+	border-radius: 3px;
+	background: var(--rt-panel);
+}
+/* Guise-bearing accents carry the register's violet (Miasma / the supernatural). */
+.theme-rippers .ib-side-tab[data-category="guise"].active,
+.theme-rippers .ib-action-btn[data-guise] {
+	border-left-color: var(--rt-violet);
+}

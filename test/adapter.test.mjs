@@ -174,7 +174,8 @@ test('registerWithSAH registers the adapter + defaults + theme, and no-ops on a 
 	assert.equal(calls.adapter.id, SYSTEM_ID);
 	assert.equal(calls.attrs.id, SYSTEM_ID);
 	assert.equal(calls.attrs.data, DEFAULT_ATTRIBUTES);
-	assert.equal(calls.theme.id, 'rippers-blood');
+	assert.equal(calls.theme.id, 'rippers');            // theme key -> CSS class .theme-rippers (SPEC)
+	assert.equal(calls.theme.cfg.label, 'Rippers Unmasked');
 	// community convention: the adapter EXTENDS SAH's BaseSystemAdapter
 	const inst = new calls.adapter.Cls();
 	assert.ok(inst instanceof FakeBase, 'adapter should extend api.BaseSystemAdapter');

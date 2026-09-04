@@ -299,8 +299,12 @@ export function registerWithSAH(api) {
 			isCompatible: (ctx) => (ctx?.system?.id ?? globalThis.game?.system?.id) === SYSTEM_ID,
 		});
 		api.registerDefaultAttributes?.(SYSTEM_ID, DEFAULT_ATTRIBUTES, { source: MODULE_ID });
-		api.registerTheme?.('rippers-blood', {
-			label: 'Rippers (Blood)',
+		// Theme key 'rippers' -> CSS class .theme-rippers (SPEC-stylish-hud-theme-api.md).
+		// Selectable at Configure HUD > Global Settings > Common > Theme once this module
+		// (which loads AFTER SAH) is active. Visual identity is pure CSS keyed on the class;
+		// the registration only carries the label + layout defaults.
+		api.registerTheme?.('rippers', {
+			label: 'Rippers Unmasked',
 			defaults: { scale: 1, format: 'box', nameZ: 5, barsZ: 5, dotsZ: 5, numbersZ: 5, badgesZ: 150 },
 		});
 		console.log(`[${MODULE_ID}] registered projectfu adapter with Stylish Action HUD.`);
