@@ -2,7 +2,7 @@
 	"id": "rippers-stylish-hud",
 	"title": "Rippers Unmasked — Stylish Action HUD (Fabula Ultima bridge)",
 	"description": "Registers a Project FU (Fabula Ultima) system adapter with the Stylish Action HUD module: a party HUD tracking HP / MP / IP + condition icons, and an action menu for Attacks, Spells, Skills & Features, Inventory (consumables), Arcana (pulse/dismiss, Arcanist-only), Guises, and the four FU system actions (Guard/Study/Hinder/Objective). Aligned to the SAH community-assets ProjectFU adapter conventions; uses only SAH's public adapter API (no Project FU fork; no SAH code redistributed). A personal-table module — not for redistribution.",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"url": "https://github.com/RoscoeRackham/rippers-stylish-hud",
 	"manifest": "https://github.com/RoscoeRackham/rippers-stylish-hud/releases/latest/download/module.json",
 	"download": "https://github.com/RoscoeRackham/rippers-stylish-hud/releases/latest/download/rippers-stylish-hud.zip",

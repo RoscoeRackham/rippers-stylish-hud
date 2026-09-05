@@ -184,13 +184,38 @@
 .theme-rippers .ib-list-item {
 	font-family: var(--rt-mono);
 	font-size: 12px;
-	text-transform: none;                           /* skill/item/spell names in authored case — the fix Austin asked for */
+	text-transform: none;
 	color: var(--rt-bone-dim);
 	background: var(--rt-panel);
 	border: 1px solid var(--rt-border);
 	transition: color .12s, border-color .12s;
 }
 .theme-rippers .ib-list-item:hover { color: var(--rt-bone); border-color: var(--rt-red); }
+
+/* ── Authored-case NAMES (Austin, 2026-09-05: names never all-caps, anywhere) ─────
+ * Verified against the INSTALLED SAH v2.7.3 (hud-base.css + renderer.js): SAH sets
+ * the caps on the CHILD span that holds the name, so a parent override can't win —
+ * target the name element itself.
+ *   .ib-identity-name → action-menu actor name. SAH font "Teko" (HAS lowercase) +
+ *                       text-transform:uppercase @ hud-base 1104 → none is enough.
+ *   .ib-name-text     → party-card actor name (natural in base; kept for safety).
+ *   .ib-font-hero     → item/spell NAMES + submenu TITLES. SAH font here is
+ *                       "Bebas Neue", an ALL-CAPS typeface with no lowercase glyphs,
+ *                       so text-transform:none alone still renders CAPS — the font
+ *                       MUST change. Re-point it to our content face (Plex Mono,
+ *                       which matches the .ib-list-item rows) so names render in
+ *                       their authored case. (v0.1.3's .ib-list-item fix missed this
+ *                       because the name lives in this .ib-font-hero child.)
+ * Structural micro-labels stay upper (allowed): .ib-identity-sub = the literal
+ * "Selected Actor" i18n label; .ib-number-label = HP/MP/IP — NOT names, untouched. */
+.theme-rippers .ib-identity-name,
+.theme-rippers .ib-name-text {
+	text-transform: none;
+}
+.theme-rippers .ib-font-hero {
+	font-family: var(--rt-mono);                    /* off Bebas Neue (all-caps) → a face with lowercase */
+	text-transform: none;
+}
 
 /* ── Quick-slot cells (.ib-quick-slot-container, 38×38 slots) ─────────────────────── */
 .theme-rippers .ib-quick-slot-container {
