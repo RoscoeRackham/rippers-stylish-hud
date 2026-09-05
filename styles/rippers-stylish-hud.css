@@ -91,6 +91,7 @@
 	font-weight: 800;
 	line-height: 1.3;
 	letter-spacing: .01em;
+	text-transform: none;                           /* actor name in authored case (Austin, no all-caps) */
 	text-shadow: 2px 2px 0 rgba(7,4,5,.9);
 	padding: 6px 12px;
 }
@@ -116,19 +117,23 @@
 	font-size: 18px;
 	line-height: 1.3;
 	letter-spacing: .02em;
+	text-transform: none;                           /* title/name in authored case */
 	color: var(--rt-bone);
 	background: rgba(7,4,5,.85);
 	border-bottom: 2px solid var(--rt-red);
 	padding: 8px 14px;
 }
 
-/* ── Category side-tabs (.ib-side-tab) — chrome verbs, Plex Mono caps, red-active ── */
+/* ── Category side-tabs (.ib-side-tab) — chrome verbs, Plex Mono, natural case ────── */
+/* Register rule (Austin, 2026-09-05): category/verb names render in their authored
+ * case, never forced caps. Structural micro-labels (HP/MP/IP) may stay upper; these
+ * carry verb/category names, so — when in doubt, natural case. */
 .theme-rippers .ib-side-tab {
 	font-family: var(--rt-mono);
 	font-size: 11px;
 	font-weight: 600;
-	letter-spacing: .12em;
-	text-transform: uppercase;
+	letter-spacing: .06em;
+	text-transform: none;
 	color: var(--rt-bone-dim);
 	background: var(--rt-panel);
 	border: 1px solid var(--rt-border);
@@ -154,6 +159,7 @@
 	font-size: 12px;
 	font-weight: 600;
 	letter-spacing: .06em;
+	text-transform: none;                           /* category/action names in authored case */
 	color: var(--rt-bone);
 	background: var(--rt-card);
 	border: 1px solid var(--rt-border);
@@ -178,6 +184,7 @@
 .theme-rippers .ib-list-item {
 	font-family: var(--rt-mono);
 	font-size: 12px;
+	text-transform: none;                           /* skill/item/spell names in authored case — the fix Austin asked for */
 	color: var(--rt-bone-dim);
 	background: var(--rt-panel);
 	border: 1px solid var(--rt-border);
@@ -189,10 +196,12 @@
 .theme-rippers .ib-quick-slot-container {
 	background: var(--rt-card);
 	border: 1px solid var(--rt-border);
+	text-transform: none;                           /* favorited item names in authored case (inherits to slots) */
 }
 .theme-rippers .ib-quick-slot-container > * {
 	border: 1px solid var(--rt-border);
 	background: var(--rt-panel);
+	text-transform: none;                           /* beat a base rule set on the slot child, not the container */
 }
 .theme-rippers .ib-quick-slot-container > *:hover { border-color: var(--rt-red); }
 
@@ -216,6 +225,7 @@
 	font-family: var(--rt-disp);
 	font-weight: 800;
 	line-height: 1.3;
+	text-transform: none;                           /* party-card actor name in authored case */
 	color: var(--rt-bone);
 	text-shadow: 1px 1px 0 rgba(7,4,5,.9);
 }
