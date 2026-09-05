@@ -2,23 +2,62 @@
 	"id": "rippers-stylish-hud",
 	"title": "Rippers Unmasked — Stylish Action HUD (Fabula Ultima bridge)",
 	"description": "Registers a Project FU (Fabula Ultima) system adapter with the Stylish Action HUD module: a party HUD tracking HP / MP / IP + condition icons, and an action menu for Attacks, Spells, Skills & Features, Inventory (consumables), Arcana (pulse/dismiss, Arcanist-only), Guises, and the four FU system actions (Guard/Study/Hinder/Objective). Aligned to the SAH community-assets ProjectFU adapter conventions; uses only SAH's public adapter API (no Project FU fork; no SAH code redistributed). A personal-table module — not for redistribution.",
-	"version": "0.1.3",
+	"version": "0.1.4",
 	"url": "https://github.com/RoscoeRackham/rippers-stylish-hud",
 	"manifest": "https://github.com/RoscoeRackham/rippers-stylish-hud/releases/latest/download/module.json",
 	"download": "https://github.com/RoscoeRackham/rippers-stylish-hud/releases/latest/download/rippers-stylish-hud.zip",
-	"compatibility": { "minimum": "13", "verified": "13", "maximum": "13" },
-	"authors": [ { "name": "Austin (cubemail.exe)" } ],
-	"esmodules": [ "scripts/rippers-stylish-hud.mjs" ],
-	"styles": [ "styles/rippers-stylish-hud.css" ],
-	"languages": [ { "lang": "en", "name": "English", "path": "languages/en.json" } ],
+	"compatibility": {
+		"minimum": "13",
+		"verified": "13",
+		"maximum": "13"
+	},
+	"authors": [
+		{
+			"name": "Austin (cubemail.exe)"
+		}
+	],
+	"esmodules": [
+		"scripts/rippers-stylish-hud.mjs",
+		"scripts/end-turn-bridge.mjs"
+	],
+	"styles": [
+		"styles/rippers-stylish-hud.css"
+	],
+	"languages": [
+		{
+			"lang": "en",
+			"name": "English",
+			"path": "languages/en.json"
+		}
+	],
 	"relationships": {
-		"systems": [ { "id": "projectfu", "type": "system" } ],
+		"systems": [
+			{
+				"id": "projectfu",
+				"type": "system"
+			}
+		],
 		"requires": [
-			{ "id": "stylish-action-hud", "type": "module", "reason": "This module is a Stylish Action HUD system adapter; it does nothing without SAH.", "compatibility": { "minimum": "2.5.2" } }
+			{
+				"id": "stylish-action-hud",
+				"type": "module",
+				"reason": "This module is a Stylish Action HUD system adapter; it does nothing without SAH.",
+				"compatibility": {
+					"minimum": "2.5.2"
+				}
+			}
 		],
 		"recommends": [
-			{ "id": "rippers-arcana", "type": "module", "reason": "Surfaces Arcana (pulse/dismiss) in the action menu." },
-			{ "id": "rippers-guise", "type": "module", "reason": "Surfaces Guises + routes guise actions to its API." }
+			{
+				"id": "rippers-arcana",
+				"type": "module",
+				"reason": "Surfaces Arcana (pulse/dismiss) in the action menu."
+			},
+			{
+				"id": "rippers-guise",
+				"type": "module",
+				"reason": "Surfaces Guises + routes guise actions to its API."
+			}
 		]
 	},
 	"flags": {
