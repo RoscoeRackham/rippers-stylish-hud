@@ -45,7 +45,7 @@
 	--rt-card2: #1a0e12;
 	--rt-border: #2b1d16;
 	--rt-border-red: #4a1a22;
-	--rt-red: #c8102a;
+	--rt-red: #c8102a;             /* ACCENT only — thin borders, spines, icons, 1px underlines. No large red FILL exists in this HUD (red-legibility law); the sheet's #8c1c26 masthead ground has no analogue element in SAH's action-menu DOM, so it is intentionally unused here. */
 	--rt-bone: #e8dccb;
 	--rt-bone-dim: #c9b8a8;
 	--rt-muted: #8a7568;
@@ -67,9 +67,9 @@
 	position: relative;
 	background: var(--rt-bg);
 	border: 1px solid var(--rt-border);
-	border-top: 2px solid var(--rt-red);            /* red-topped floor motif */
+	border-top: 2px solid var(--rt-red);            /* red-topped floor motif (thin accent) */
 	clip-path: var(--rt-notch);
-	box-shadow: 6px 6px 0 rgba(200,16,42,.22), 0 20px 50px rgba(0,0,0,.6);
+	box-shadow: 4px 4px 0 rgba(0,0,0,.55);          /* hard flat shadow, neutral — no red glow / no soft elevation at rest (register + red-legibility law) */
 	color: var(--rt-bone);
 }
 /* faint bone grain over the near-black ground (the sheet's rs-grain) */
@@ -102,7 +102,7 @@
 	background: var(--rt-bg);
 	border: 1px solid var(--rt-border);
 	clip-path: var(--rt-notch);
-	box-shadow: 0 20px 50px rgba(0,0,0,.6);
+	box-shadow: 4px 4px 0 rgba(0,0,0,.55);          /* hard flat, neutral at rest (register) */
 }
 .theme-rippers .ib-main-panel { background: var(--rt-panel); }
 .theme-rippers .ib-sidebar-panel {
@@ -140,6 +140,12 @@
 	transition: color .12s, border-color .12s, background .12s;
 }
 .theme-rippers .ib-side-tab:hover { color: var(--rt-bone); border-color: var(--rt-red); }
+/* NOTE (2026-09-06, verified live vs SAH 2.7.3): SAH renders categories as
+ * .ib-action-btn, NOT side-tabs — there is no .ib-side-tab and no active-state
+ * class on category buttons, so this block is inert on the shipped SAH. Kept
+ * (harmless, higher-specificity, no effect) in case a future SAH layout uses
+ * side-tabs; the active-state red intentionally stays the #c8102a accent, as no
+ * filled red ground is warranted in this HUD (red-legibility law). */
 .theme-rippers .ib-side-tab.active,
 .theme-rippers .ib-side-tab[aria-selected="true"],
 .theme-rippers .ib-side-tab.selected {
